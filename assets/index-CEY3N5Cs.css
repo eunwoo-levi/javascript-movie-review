@@ -1,0 +1,516 @@
+:root {
+  --color-white: #ffffff;
+  --color-lightblue-90: #0da9fd;
+  --color-bluegray-100: #242a32;
+  --color-bluegray-80: #39414d;
+  --color-bluegray-10: #e0e6ed;
+  --color-bluegray-30: #a6b1c3;
+  --color-bluegray-90: #2f3844;
+  --color-gray-300: #d1d3d4;
+  --color-yellow: #ffc700;
+  --color-ffffff: #ffffff;
+  --color-242a32: #242a32;
+}
+* {
+  box-sizing: border-box;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+body {
+  font-size: 16px;
+  color: var(--color-white);
+  background-color: var(--color-bluegray-80);
+}
+#wrap,
+section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+main {
+  margin: 64px 0;
+}
+.star {
+  width: 24px;
+}
+button {
+  border: 0;
+  padding: 10px 10px;
+  cursor: pointer;
+  font-size: 16px;
+}
+button.primary {
+  color: var(--color-white);
+  font-weight: bold;
+  background-color: var(--color-lightblue-90);
+  border-radius: 8px;
+}
+#wrap {
+  min-width: 1440px;
+  background-color: var(--color-bluegray-100);
+}
+#wrap h2 {
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin-bottom: 32px;
+}
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.background-container {
+  position: relative;
+  background-position: center center;
+  background-size: cover;
+  height: 500px;
+  padding: 48px;
+}
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.overlay img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.5);
+}
+.top-rated-container {
+  user-select: none;
+  position: relative;
+  z-index: 2;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.top-rated-movie {
+  margin-top: 64px;
+}
+.top-rated-movie > *:not(:last-child) {
+  margin-bottom: 8px;
+}
+button.logo {
+  background: none;
+  font-size: 2rem;
+  cursor: pointer;
+}
+button.logo :hover {
+  scale: 1.1;
+  transition: 0.3s;
+}
+button.add-more-button {
+  width: 100%;
+}
+.rate {
+  display: flex;
+  align-items: baseline;
+  color: var(--color-yellow);
+}
+.rate > img {
+  position: relative;
+  top: 2px;
+}
+span.rate-value {
+  margin-left: 8px;
+  font-weight: bold;
+  font-size: 1.66rem;
+}
+.title {
+  font-size: 3rem;
+  font-weight: bold;
+}
+footer.footer {
+  min-height: 180px;
+  background-color: var(--color-bluegray-80);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  font-size: 1.1rem;
+}
+footer.footer p:not(:last-child) {
+  margin-bottom: 8px;
+}
+.header-container {
+  display: flex;
+  justify-content: center;
+}
+.search-form {
+  width: 40%;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid white;
+  border-radius: 32px;
+  padding: 6px 16px;
+}
+.search-form input {
+  background: transparent;
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin-right: 8px;
+  border: none;
+  color: white;
+  width: 100%;
+}
+.search-form input::placeholder {
+  color: white;
+}
+.search-form input:focus {
+  outline: none;
+}
+.search-button {
+  background: none;
+  border: none;
+}
+.movie-list-title {
+  font-size: 36px;
+  font-weight: 600;
+  margin-bottom: 56px;
+}
+.disabled {
+  display: none;
+}
+.background-container-disabled {
+  height: 100px;
+}
+.empty-search-result-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.empty-search-result-image {
+  width: 72px;
+  height: 63px;
+  margin-bottom: 16px;
+}
+.empty-search-result-text {
+  font-size: 36px;
+  font-weight: 600;
+}
+.error-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  align-items: center;
+  justify-content: center;
+  height: 80vh;
+  font-size: 36px;
+  font-weight: 600;
+}
+.error-page-button {
+  width: 100%;
+  font-size: 24px;
+}
+.error-page-button:hover {
+  scale: 1.1;
+  transition: 0.3s;
+}
+.error-page-image {
+  width: 150px;
+  height: 130px;
+  object-fit: cover;
+}
+/* modal.css */
+body.modal-open {
+  overflow: hidden;
+}
+.modal-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* 반투명 배경을 위해 설정 */
+  backdrop-filter: blur(10px); /* 블러 효과 적용 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  visibility: hidden; /* 모달이 기본적으로 보이지 않도록 설정 */
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+}
+.modal-background.active {
+  visibility: visible;
+  opacity: 1;
+}
+.modal {
+  background-color: var(--color-bluegray-90);
+  padding: 20px;
+  border-radius: 16px;
+  color: white;
+  z-index: 2;
+  position: relative;
+  width: 1000px;
+}
+.close-modal {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  top: 24px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+}
+.modal-container {
+  display: flex;
+}
+.modal-image img {
+  width: 380px;
+  border-radius: 16px;
+}
+.modal-description {
+  width: 100%;
+  padding: 8px;
+  margin-left: 16px;
+  line-height: 1.6rem;
+}
+.modal-description .rate > img {
+  position: relative;
+  top: 5px;
+}
+.modal-description > *:not(:last-child) {
+  margin-bottom: 8px;
+}
+.modal-description h2 {
+  font-size: 2rem;
+  margin: 0 0 8px;
+}
+.detail {
+  max-height: 430px;
+  overflow-y: auto;
+}
+/* http://meyerweb.com/eric/tools/css/reset/
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+html,
+body,
+div,
+span,
+applet,
+object,
+iframe,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+a,
+abbr,
+acronym,
+address,
+big,
+cite,
+code,
+del,
+dfn,
+em,
+img,
+ins,
+kbd,
+q,
+s,
+samp,
+small,
+strike,
+strong,
+sub,
+sup,
+tt,
+var,
+b,
+u,
+i,
+center,
+dl,
+dt,
+dd,
+ol,
+ul,
+li,
+fieldset,
+form,
+label,
+legend,
+table,
+caption,
+tbody,
+tfoot,
+thead,
+tr,
+th,
+td,
+article,
+aside,
+canvas,
+details,
+embed,
+figure,
+figcaption,
+footer,
+header,
+hgroup,
+menu,
+nav,
+output,
+ruby,
+section,
+summary,
+time,
+mark,
+audio,
+video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+menu,
+nav,
+section {
+  display: block;
+}
+body {
+  line-height: 1;
+}
+ol,
+ul {
+  list-style: none;
+}
+blockquote,
+q {
+  quotes: none;
+}
+blockquote:before,
+blockquote:after,
+q:before,
+q:after {
+  content: "";
+  content: none;
+}
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+.tab {
+  display: flex;
+  margin: 32px 0;
+}
+.tab-item {
+  cursor: pointer;
+  user-select: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 40px;
+
+  border-radius: 40px;
+  background: linear-gradient(90deg, #14191f 0%, #0a0d12 100%);
+}
+.tab-item.selected {
+  background: linear-gradient(90deg, #4b8bf4 0%, #1c2a3a 100%);
+}
+.tab-item:hover {
+  background: linear-gradient(90deg, #2f3e54 0%, #4b8bf4 100%);
+}
+.tab li:not(:last-child) {
+  margin-right: 8px;
+}
+.thumbnail-list {
+  margin: 0 auto 56px;
+  display: grid;
+  grid-template-columns: repeat(5, 200px);
+  gap: 70px;
+}
+.thumbnail {
+  width: 200px;
+  height: 300px;
+  border-radius: 8px;
+}
+.item {
+  user-select: none;
+  cursor: pointer;
+}
+.item-desc > *:not(:last-child) {
+  position: relative;
+  margin-bottom: 4px;
+  line-height: 1.2rem;
+}
+p.rate {
+  display: flex;
+  align-items: baseline;
+  color: var(--color-yellow);
+}
+p.rate > span {
+  margin-left: 4px;
+}
+.item .star {
+  width: 16px;
+  top: 1px;
+}
+.skeleton-item {
+  animation: skeleton-loading 1.5s infinite;
+}
+.skeleton-thumbnail {
+  width: 100%;
+  height: 180px;
+  background-color: #e0e0e0;
+  border-radius: 8px;
+}
+.skeleton-rate {
+  width: 60px;
+  height: 16px;
+  background-color: #e0e0e0;
+  margin-top: 8px;
+  border-radius: 4px;
+}
+.skeleton-title {
+  width: 100%;
+  height: 20px;
+  background-color: #e0e0e0;
+  margin-top: 8px;
+  border-radius: 4px;
+}
+@keyframes skeleton-loading {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
