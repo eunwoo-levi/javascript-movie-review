@@ -297,8 +297,8 @@ addEventListener("DOMContentLoaded", async () => {
   const $movieList = document.querySelector(".thumbnail-list");
   if ($movieList) showSkeletons($movieList);
   const movies = await getMovieList({ page: 1 });
-  Header(movies.results[0]);
-  if ($movieList) {
+  if (movies && $movieList) {
+    Header(movies.results[0]);
     $movieList.innerHTML = "";
     addMoviePost(movies.results, $movieList);
   }
