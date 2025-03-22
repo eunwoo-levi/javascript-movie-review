@@ -41,13 +41,14 @@ const CustomButton = ({ title, className = "" }) => {
   customButton.textContent = title;
   return customButton;
 };
-const ErrorPage = () => {
+const ErrorPage = (errorMessage) => {
   const errorPageContainer = document.createElement("div");
   errorPageContainer.className = "error-page-container";
   errorPageContainer.innerHTML = /*html*/
   `
       <img src="./images/으아아행성이.png" alt="error-page-image" class="error-page-image" />
       <h1>오류가 발생했습니다.</h1>
+      <p>${errorMessage}</p>
       ${CustomButton({
     title: "홈으로 돌아가기",
     className: "error-page-button"
@@ -59,24 +60,34 @@ const ErrorPage = () => {
   });
   return errorPageContainer;
 };
-const url$1 = (page) => `https://api.themoviedb.org/3/tv/popular?page=${page}`;
-const options$1 = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization: `Bearer ${"eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ODM5YTA0NWE3ZWE2MmZiMzgyZjk0YjYzMjNiZmNiOCIsIm5iZiI6MTcxNTYwOTMzMi40NTUwMDAyLCJzdWIiOiI2NjQyMWVmNGJjZDQ0ZmM3Mjg0ZTNkYTEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.oM6bJmAtSFwD2uePCLydHQhaSgYv1H3eWtxaJF2hfW0"}`
-  }
-};
-const getMovieList = async ({ page }) => {
-  try {
-    const response = await fetch(url$1(page), options$1);
-    if (!response.ok) {
-      throw new Error("Failed to fetch movie list");
+const apiClient = async (method, endPoint, headers = {}) => {
+  const API_URL = `https://api.themoviedb.org/3${endPoint}`;
+  const options = {
+    method,
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${"eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ODM5YTA0NWE3ZWE2MmZiMzgyZjk0YjYzMjNiZmNiOCIsIm5iZiI6MTcxNTYwOTMzMi40NTUwMDAyLCJzdWIiOiI2NjQyMWVmNGJjZDQ0ZmM3Mjg0ZTNkYTEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.oM6bJmAtSFwD2uePCLydHQhaSgYv1H3eWtxaJF2hfW0"}`,
+      ...headers
     }
-    return response.json();
+  };
+  const response = await fetch(API_URL, options);
+  if (!response.ok) {
+    throw new Error("Failed to fetch movie list");
+  }
+  return response.json();
+};
+const getMovieList = async ({
+  page
+}) => {
+  try {
+    return await apiClient("GET", `/tv/popular?page=${page}`);
   } catch (error) {
-    const $container = document.querySelector(".container");
-    $container.replaceChildren(ErrorPage());
+    if (error instanceof Error) {
+      const $container = document.querySelector(".container");
+      $container.replaceChildren(
+        ErrorPage("영화 리스트를 불러오는데 실패하였습니다.")
+      );
+    }
   }
 };
 const Header = (movie) => {
@@ -129,22 +140,40 @@ const MovieSkeleton = () => {
   return skeletonItem;
 };
 const createSkeletons = (count = 10) => {
-  const fragment = document.createDocumentFragment();
+  const skeleton = document.createElement("div");
+  skeleton.classList.add("skeleton");
   for (let i = 0; i < count; i++) {
-    fragment.appendChild(MovieSkeleton());
+    skeleton.appendChild(MovieSkeleton());
   }
-  return fragment;
+  return skeleton;
 };
 function showSkeletons($container, count = 10) {
   $container.appendChild(createSkeletons(count));
 }
-const MoviePost = (movie) => {
-  const moviePost = document.createElement("li");
-  const movieTitle = movie.name ? movie.name : movie.title;
+const getSearchedMovie = async (query, page) => {
+  try {
+    return await apiClient(
+      "GET",
+      `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      const $container = document.querySelector(".container");
+      $container.replaceChildren(
+        ErrorPage("검색 결과를 불러오는데 실패하였습니다.")
+      );
+    }
+  }
+};
+const toElement = (htmlString) => {
+  const template = document.createElement("template");
+  template.innerHTML = htmlString.trim();
+  return template.content.firstChild;
+};
+function MovieCard(movieTitle, movie) {
   const movieImgPath = movie.poster_path ? `https://media.themoviedb.org/t/p/w440_and_h660_face${movie.poster_path}` : "images/nullImage.png";
-  moviePost.innerHTML = /*html*/
-  `
-    <div class="item">
+  return toElement(`
+    <li class="item">
       <img
         class="thumbnail"
         src=${movieImgPath}
@@ -158,10 +187,12 @@ const MoviePost = (movie) => {
         </p>
         <strong>${movieTitle}</strong>
       </div>
-    </div>
-  `;
-  return moviePost;
-};
+    </li>
+  `);
+}
+function MoreMoviesButton() {
+  return document.getElementById("more-movies-button");
+}
 const EmptySearchResult = () => {
   const emptySearchResult = document.createElement("div");
   emptySearchResult.classList.add("empty-search-result-container");
@@ -180,10 +211,10 @@ function showEmptySearchResult() {
   if (!$emptySearchResult) {
     $movieContainer == null ? void 0 : $movieContainer.appendChild(EmptySearchResult());
   }
-  const $moreMoviesButton = document.getElementById("more-movies-button");
+  const $moreMoviesButton = MoreMoviesButton();
   $moreMoviesButton == null ? void 0 : $moreMoviesButton.classList.add("disabled");
 }
-function addMoviePost(movieList, $movieList) {
+function addMovieCard(movieList, $movieListContainer) {
   if (movieList.length === 0) {
     showEmptySearchResult();
     return;
@@ -191,43 +222,38 @@ function addMoviePost(movieList, $movieList) {
   const $emptySearchResult = document.querySelector(
     ".empty-search-result-container"
   );
-  const $moreMoviesButton = document.getElementById("more-movies-button");
+  const $moreMoviesButton = MoreMoviesButton();
   if ($emptySearchResult) {
     $emptySearchResult.remove();
     $moreMoviesButton == null ? void 0 : $moreMoviesButton.classList.remove("disabled");
   }
-  movieList.forEach((movie) => {
-    $movieList.appendChild(MoviePost(movie));
-  });
+  addMoreMovies$1($movieListContainer, movieList);
 }
-const url = (query, page) => `https://api.themoviedb.org/3/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`;
-const options = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization: `Bearer ${"eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ODM5YTA0NWE3ZWE2MmZiMzgyZjk0YjYzMjNiZmNiOCIsIm5iZiI6MTcxNTYwOTMzMi40NTUwMDAyLCJzdWIiOiI2NjQyMWVmNGJjZDQ0ZmM3Mjg0ZTNkYTEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.oM6bJmAtSFwD2uePCLydHQhaSgYv1H3eWtxaJF2hfW0"}`
+function addMoreMovies$1($movieListContainer, movieList) {
+  const fragment = document.createDocumentFragment();
+  if (movieList[0].title) {
+    fragment.append(
+      ...movieList.map((movie) => MovieCard(movie.title, movie))
+    );
+    $movieListContainer.appendChild(fragment);
+    return;
   }
-};
-const getSearchedPost = async (query, page) => {
-  try {
-    const response = await fetch(url(query, page), options);
-    if (!response.ok) {
-      throw new Error("Failed to fetch searched post");
-    }
-    return response.json();
-  } catch (error) {
-    const $container = document.querySelector(".container");
-    $container.replaceChildren(ErrorPage());
-  }
-};
+  fragment.append(
+    ...movieList.map((movie) => MovieCard(movie.name, movie))
+  );
+  $movieListContainer.appendChild(fragment);
+}
 function disableMoreButton(totalPages, currentPage) {
-  const $moreMoviesButton = document.getElementById("more-movies-button");
+  const $moreMoviesButton = MoreMoviesButton();
   if (totalPages === currentPage) {
     $moreMoviesButton == null ? void 0 : $moreMoviesButton.classList.add("disabled");
   }
 }
+const getUrlParams = () => {
+  return new URLSearchParams(window.location.search);
+};
 async function addMoreMovies($movieList) {
-  const params = new URLSearchParams(window.location.search);
+  const params = getUrlParams();
   const page = params.get("page");
   const query = params.get("query");
   if (!page) {
@@ -236,23 +262,33 @@ async function addMoreMovies($movieList) {
     params.set("page", (parseInt(page) + 1).toString());
   }
   if (query) {
-    const searchedMovies = await getSearchedPost(
+    const searchedMovies = await getSearchedMovie(
       query,
       parseInt(params.get("page"))
     );
-    addMoviePost(searchedMovies.results, $movieList);
+    if (!searchedMovies) {
+      return;
+    }
+    addMovieCard(searchedMovies.results, $movieList);
     disableMoreButton(
       searchedMovies.total_pages,
       parseInt(params.get("page"))
     );
   } else {
     const movies = await getMovieList({ page: parseInt(params.get("page")) });
-    addMoviePost(movies.results, $movieList);
+    if (!movies) {
+      return;
+    }
+    addMovieCard(movies.results, $movieList);
     disableMoreButton(movies.total_pages, parseInt(params.get("page")));
   }
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   history.pushState(null, "", newUrl);
 }
+const updateUrl = (params) => {
+  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  history.pushState(null, "", newUrl);
+};
 const searchFormSubmitHandler = async (e) => {
   const $thumbnailList = document.querySelector(
     ".thumbnail-list"
@@ -261,19 +297,34 @@ const searchFormSubmitHandler = async (e) => {
     $thumbnailList.innerHTML = "";
     showSkeletons($thumbnailList);
   }
-  const $overlay = document.querySelector(".overlay");
-  $overlay == null ? void 0 : $overlay.classList.add("disabled");
-  const $topRatedMovie = document.querySelector(".top-rated-movie");
-  $topRatedMovie == null ? void 0 : $topRatedMovie.classList.add("disabled");
-  const $backgroundContainer = document.querySelector(".background-container");
-  $backgroundContainer == null ? void 0 : $backgroundContainer.classList.add("background-container-disabled");
+  disableElements();
   const $movieListTitle = document.querySelector(".movie-list-title");
   const formData = new FormData(e.target);
   let searchQuery = formData.get("search-input");
   if ($movieListTitle) {
     $movieListTitle.textContent = `"${searchQuery}" 검색 결과`;
   }
-  const params = new URLSearchParams(window.location.search);
+  const params = getUrlParams();
+  updateUrlParams(params, searchQuery);
+  const searchedMovies = await getSearchedMovie(
+    searchQuery,
+    parseInt(params.get("page"))
+  );
+  if ($thumbnailList && searchedMovies) {
+    $thumbnailList.innerHTML = "";
+    addMovieCard(searchedMovies.results, $thumbnailList);
+  }
+  updateUrl(params);
+};
+function disableElements() {
+  const $overlay = document.querySelector(".overlay");
+  $overlay == null ? void 0 : $overlay.classList.add("disabled");
+  const $topRatedMovie = document.querySelector(".top-rated-movie");
+  $topRatedMovie == null ? void 0 : $topRatedMovie.classList.add("disabled");
+  const $backgroundContainer = document.querySelector(".background-container");
+  $backgroundContainer == null ? void 0 : $backgroundContainer.classList.add("background-container-disabled");
+}
+function updateUrlParams(params, searchQuery) {
   const page = params.get("page");
   if (!page) {
     params.append("page", "1");
@@ -282,25 +333,19 @@ const searchFormSubmitHandler = async (e) => {
     params.set("page", "1");
     params.set("query", searchQuery);
   }
-  const searchedMovies = await getSearchedPost(
-    searchQuery,
-    parseInt(params.get("page"))
-  );
-  if ($thumbnailList) {
-    $thumbnailList.innerHTML = "";
-    addMoviePost(searchedMovies.results, $thumbnailList);
-  }
-  const newUrl = `${window.location.pathname}?${params.toString()}`;
-  history.pushState(null, "", newUrl);
+}
+const removeSkeletons = () => {
+  const $skeleton = document.querySelector(".skeleton");
+  $skeleton == null ? void 0 : $skeleton.remove();
 };
-addEventListener("DOMContentLoaded", async () => {
+async function init() {
   const $movieList = document.querySelector(".thumbnail-list");
-  if ($movieList) showSkeletons($movieList);
+  showSkeletons($movieList);
   const movies = await getMovieList({ page: 1 });
   if (movies && $movieList) {
     Header(movies.results[0]);
-    $movieList.innerHTML = "";
-    addMoviePost(movies.results, $movieList);
+    removeSkeletons();
+    addMovieCard(movies.results, $movieList);
   }
   const $movieContainer = document.getElementById("movie-container");
   const addMoreMoviesButton = CustomButton({
@@ -309,14 +354,22 @@ addEventListener("DOMContentLoaded", async () => {
   });
   addMoreMoviesButton.id = "more-movies-button";
   $movieContainer == null ? void 0 : $movieContainer.appendChild(addMoreMoviesButton);
-  const $moreMoviesButton = document.getElementById("more-movies-button");
+  const $moreMoviesButton = MoreMoviesButton();
   $moreMoviesButton == null ? void 0 : $moreMoviesButton.addEventListener("click", async () => {
-    if (!$movieList) return;
-    await addMoreMovies($movieList);
+    showSkeletons($movieList);
+    if ($movieList) {
+      removeSkeletons();
+      await addMoreMovies($movieList);
+    }
   });
   const searchForm = document.querySelector(".search-form");
   searchForm == null ? void 0 : searchForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    searchFormSubmitHandler(e);
+    await searchFormSubmitHandler(e);
   });
-});
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
