@@ -35,31 +35,6 @@
     fetch(link.href, fetchOpts);
   }
 })();
-const CustomButton = ({ title, className = "" }) => {
-  const customButton = document.createElement("button");
-  customButton.className = `primary detail ${className}`;
-  customButton.textContent = title;
-  return customButton;
-};
-const ErrorPage = (errorMessage) => {
-  const errorPageContainer = document.createElement("div");
-  errorPageContainer.className = "error-page-container";
-  errorPageContainer.innerHTML = /*html*/
-  `
-      <img src="./images/으아아행성이.png" alt="error-page-image" class="error-page-image" />
-      <h1>오류가 발생했습니다.</h1>
-      <p>${errorMessage}</p>
-      ${CustomButton({
-    title: "홈으로 돌아가기",
-    className: "error-page-button"
-  }).outerHTML}
-  `;
-  const errorPageButton = errorPageContainer.querySelector(".error-page-button");
-  errorPageButton.addEventListener("click", () => {
-    window.location.replace("/");
-  });
-  return errorPageContainer;
-};
 const apiClient = async (method, endPoint, headers = {}) => {
   const API_URL = `https://api.themoviedb.org/3${endPoint}`;
   const options = {
@@ -82,13 +57,14 @@ const getMovieList = async ({
   try {
     return await apiClient("GET", `/tv/popular?page=${page}`);
   } catch (error) {
-    if (error instanceof Error) {
-      const $container = document.querySelector(".container");
-      $container.replaceChildren(
-        ErrorPage("영화 리스트를 불러오는데 실패하였습니다.")
-      );
-    }
+    throw new Error("영화 리스트를 불러오는데 실패하였습니다.");
   }
+};
+const CustomButton = ({ title, className = "" }) => {
+  const customButton = document.createElement("button");
+  customButton.className = `primary detail ${className}`;
+  customButton.textContent = title;
+  return customButton;
 };
 const Header = (movie) => {
   const $header = document.getElementById("header");
@@ -125,31 +101,6 @@ const Header = (movie) => {
     </div>
   `;
 };
-const MovieSkeleton = () => {
-  const skeletonItem = document.createElement("li");
-  skeletonItem.innerHTML = /*html*/
-  `
-      <div class="item skeleton-item">
-        <div class="thumbnail skeleton-thumbnail"></div>
-        <div class="item-desc">
-          <p class="rate skeleton-rate"></p>
-          <div class="skeleton-title"></div>
-        </div>
-      </div>
-    `;
-  return skeletonItem;
-};
-const createSkeletons = (count = 10) => {
-  const skeleton = document.createElement("div");
-  skeleton.classList.add("skeleton");
-  for (let i = 0; i < count; i++) {
-    skeleton.appendChild(MovieSkeleton());
-  }
-  return skeleton;
-};
-function showSkeletons($container, count = 10) {
-  $container.appendChild(createSkeletons(count));
-}
 const getSearchedMovie = async (query, page) => {
   try {
     return await apiClient(
@@ -157,12 +108,7 @@ const getSearchedMovie = async (query, page) => {
       `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
     );
   } catch (error) {
-    if (error instanceof Error) {
-      const $container = document.querySelector(".container");
-      $container.replaceChildren(
-        ErrorPage("검색 결과를 불러오는데 실패하였습니다.")
-      );
-    }
+    throw new Error("검색 결과를 불러오는데 실패하였습니다.");
   }
 };
 const toElement = (htmlString) => {
@@ -193,27 +139,31 @@ function MovieCard(movieTitle, movie) {
 function MoreMoviesButton() {
   return document.getElementById("more-movies-button");
 }
-const EmptySearchResult = () => {
-  const emptySearchResult = document.createElement("div");
-  emptySearchResult.classList.add("empty-search-result-container");
-  emptySearchResult.innerHTML = /*html*/
-  `
-    <img src="./images/으아아행성이.png" alt="검색 결과가 없습니다." class="empty-search-result-image"/>
-    <p class="empty-search-result-text">검색 결과가 없습니다.</p>
-  `;
-  return emptySearchResult;
+MoreMoviesButton.addDisable = () => {
+  const moreMoviesButton = document.getElementById("more-movies-button");
+  moreMoviesButton == null ? void 0 : moreMoviesButton.classList.add("disabled");
+};
+MoreMoviesButton.removeDisable = () => {
+  const moreMoviesButton = document.getElementById("more-movies-button");
+  moreMoviesButton == null ? void 0 : moreMoviesButton.classList.remove("disabled");
 };
 function showEmptySearchResult() {
   const $movieContainer = document.getElementById("movie-container");
-  const $emptySearchResult = document.querySelector(
-    ".empty-search-result-container"
+  $movieContainer == null ? void 0 : $movieContainer.appendChild(
+    toElement(`
+  <div class="empty-search-result-container">
+    <img src="./images/으아아행성이.png" alt="검색 결과가 없습니다." class="empty-search-result-image"/>
+    <p class="empty-search-result-text">검색 결과가 없습니다.</p>
+  </div>
+  `)
   );
-  if (!$emptySearchResult) {
-    $movieContainer == null ? void 0 : $movieContainer.appendChild(EmptySearchResult());
-  }
-  const $moreMoviesButton = MoreMoviesButton();
-  $moreMoviesButton == null ? void 0 : $moreMoviesButton.classList.add("disabled");
+  MoreMoviesButton.addDisable();
 }
+const createFragment = (items) => {
+  const fragment = document.createDocumentFragment();
+  fragment.append(...items);
+  return fragment;
+};
 function addMovieCard(movieList, $movieListContainer) {
   if (movieList.length === 0) {
     showEmptySearchResult();
@@ -222,31 +172,30 @@ function addMovieCard(movieList, $movieListContainer) {
   const $emptySearchResult = document.querySelector(
     ".empty-search-result-container"
   );
-  const $moreMoviesButton = MoreMoviesButton();
   if ($emptySearchResult) {
     $emptySearchResult.remove();
-    $moreMoviesButton == null ? void 0 : $moreMoviesButton.classList.remove("disabled");
+    MoreMoviesButton.removeDisable();
   }
   addMoreMovies$1($movieListContainer, movieList);
 }
 function addMoreMovies$1($movieListContainer, movieList) {
-  const fragment = document.createDocumentFragment();
   if (movieList[0].title) {
-    fragment.append(
-      ...movieList.map((movie) => MovieCard(movie.title, movie))
+    $movieListContainer.appendChild(
+      createFragment(
+        movieList.map((movie) => MovieCard(movie.title, movie))
+      )
     );
-    $movieListContainer.appendChild(fragment);
     return;
   }
-  fragment.append(
-    ...movieList.map((movie) => MovieCard(movie.name, movie))
+  $movieListContainer.appendChild(
+    createFragment(
+      movieList.map((movie) => MovieCard(movie.name, movie))
+    )
   );
-  $movieListContainer.appendChild(fragment);
 }
 function disableMoreButton(totalPages, currentPage) {
-  const $moreMoviesButton = MoreMoviesButton();
   if (totalPages === currentPage) {
-    $moreMoviesButton == null ? void 0 : $moreMoviesButton.classList.add("disabled");
+    MoreMoviesButton.addDisable();
   }
 }
 const getUrlParams = () => {
@@ -285,6 +234,63 @@ async function addMoreMovies($movieList) {
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   history.pushState(null, "", newUrl);
 }
+function ErrorPage(errorMessage) {
+  const $container = document.querySelector(".container");
+  const errorPageContainer = document.createElement("div");
+  errorPageContainer.className = "error-page-container";
+  errorPageContainer.innerHTML = /*html*/
+  `
+      <img src="./images/으아아행성이.png" alt="error-page-image" class="error-page-image" />
+      <h1>오류가 발생했습니다.</h1>
+      <p>${errorMessage}</p>
+      ${CustomButton({
+    title: "홈으로 돌아가기",
+    className: "error-page-button"
+  }).outerHTML}
+  `;
+  const errorPageButton = errorPageContainer.querySelector(".error-page-button");
+  errorPageButton.addEventListener("click", () => {
+    window.location.replace("/");
+  });
+  $container.replaceChildren(errorPageContainer);
+}
+const removeSkeletons = () => {
+  const $skeleton = document.querySelector(".skeleton");
+  $skeleton == null ? void 0 : $skeleton.remove();
+};
+const MovieSkeleton = () => {
+  return toElement(`
+      <li class="item skeleton-item">
+        <div class="thumbnail skeleton-thumbnail"></div>
+        <div class="item-desc">
+          <p class="rate skeleton-rate"></p>
+          <div class="skeleton-title"></div>
+        </div>
+      </li>
+    `);
+};
+const createSkeletons = (count = 10) => {
+  const skeleton = document.createElement("div");
+  skeleton.classList.add("skeleton");
+  skeleton.append(
+    createFragment(Array.from({ length: count }, () => MovieSkeleton()))
+  );
+  return skeleton;
+};
+function showSkeletons($container, count = 10) {
+  $container.appendChild(createSkeletons(count));
+}
+async function withSkeleton(container, asyncFunction) {
+  try {
+    showSkeletons(container);
+    const result = await asyncFunction;
+    removeSkeletons();
+    return result;
+  } catch (error) {
+    removeSkeletons();
+    throw error;
+  }
+}
 const updateUrl = (params) => {
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   history.pushState(null, "", newUrl);
@@ -295,7 +301,6 @@ const searchFormSubmitHandler = async (e) => {
   );
   if ($thumbnailList) {
     $thumbnailList.innerHTML = "";
-    showSkeletons($thumbnailList);
   }
   disableElements();
   const $movieListTitle = document.querySelector(".movie-list-title");
@@ -306,13 +311,18 @@ const searchFormSubmitHandler = async (e) => {
   }
   const params = getUrlParams();
   updateUrlParams(params, searchQuery);
-  const searchedMovies = await getSearchedMovie(
-    searchQuery,
-    parseInt(params.get("page"))
-  );
-  if ($thumbnailList && searchedMovies) {
-    $thumbnailList.innerHTML = "";
-    addMovieCard(searchedMovies.results, $thumbnailList);
+  try {
+    const searchedMovies = await withSkeleton(
+      $thumbnailList,
+      getSearchedMovie(searchQuery, 1)
+    );
+    if (searchedMovies) {
+      addMovieCard(searchedMovies.results, $thumbnailList);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      ErrorPage(error.message);
+    }
   }
   updateUrl(params);
 };
@@ -334,18 +344,22 @@ function updateUrlParams(params, searchQuery) {
     params.set("query", searchQuery);
   }
 }
-const removeSkeletons = () => {
-  const $skeleton = document.querySelector(".skeleton");
-  $skeleton == null ? void 0 : $skeleton.remove();
-};
 async function init() {
   const $movieList = document.querySelector(".thumbnail-list");
-  showSkeletons($movieList);
-  const movies = await getMovieList({ page: 1 });
-  if (movies && $movieList) {
-    Header(movies.results[0]);
-    removeSkeletons();
-    addMovieCard(movies.results, $movieList);
+  if (!$movieList) {
+    ErrorPage("영화 리스트를 불러오는데 실패하였습니다.");
+    return;
+  }
+  try {
+    const movies = await withSkeleton($movieList, getMovieList({ page: 1 }));
+    if (movies) {
+      Header(movies.results[0]);
+      addMovieCard(movies.results, $movieList);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      ErrorPage("영화 리스트를 불러오는데 실패하였습니다.");
+    }
   }
   const $movieContainer = document.getElementById("movie-container");
   const addMoreMoviesButton = CustomButton({
@@ -356,16 +370,18 @@ async function init() {
   $movieContainer == null ? void 0 : $movieContainer.appendChild(addMoreMoviesButton);
   const $moreMoviesButton = MoreMoviesButton();
   $moreMoviesButton == null ? void 0 : $moreMoviesButton.addEventListener("click", async () => {
-    showSkeletons($movieList);
-    if ($movieList) {
-      removeSkeletons();
-      await addMoreMovies($movieList);
-    }
+    withSkeleton($movieList, addMoreMovies($movieList));
   });
   const searchForm = document.querySelector(".search-form");
   searchForm == null ? void 0 : searchForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    await searchFormSubmitHandler(e);
+    try {
+      await searchFormSubmitHandler(e);
+    } catch (error) {
+      if (error instanceof Error) {
+        ErrorPage("영화 리스트를 불러오는데 실패하였습니다.");
+      }
+    }
   });
 }
 if (document.readyState === "loading") {
