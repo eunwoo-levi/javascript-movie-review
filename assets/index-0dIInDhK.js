@@ -36,7 +36,7 @@
   }
 })();
 const apiClient = async (method, endPoint, headers = {}) => {
-  const API_URL = `https://api.themoviedb.org/3${endPoint}`;
+  const API_URL = `https://api.themoviedb.orgg/3${endPoint}`;
   const options = {
     method,
     headers: {
@@ -84,24 +84,35 @@ const CustomButton = ({ title, className = "" }) => {
   customButton.textContent = title;
   return customButton;
 };
-function ErrorPage(errorMessage) {
-  const $container = document.querySelector(".container");
-  const errorPageContainer = toElement(`
-    <div class="error-page-container">
-      <img src="./images/으아아행성이.png" alt="error-page-image" class="error-page-image" />
+function ErrorModal(errorMessage) {
+  const $container = document.getElementById("wrap");
+  const errorModalContainer = toElement(`
+    <div class="error-modal-container">
+      <div class="close-error-modal">
+      X
+      </div>
       <h1>오류가 발생했습니다.</h1>
       <p>${errorMessage}</p>
       ${CustomButton({
     title: "홈으로 돌아가기",
-    className: "error-page-button"
+    className: "error-modal-button"
   }).outerHTML}
     </div>
   `);
-  const errorPageButton = errorPageContainer.querySelector(".error-page-button");
-  errorPageButton.addEventListener("click", () => {
+  const errorModalButton = errorModalContainer.querySelector(
+    ".error-modal-button"
+  );
+  errorModalButton.addEventListener("click", () => {
     window.location.replace("/");
   });
-  $container.replaceChildren(errorPageContainer);
+  $container.appendChild(errorModalContainer);
+  closeErrorModal(errorModalContainer);
+}
+function closeErrorModal(errorModalContainer) {
+  const $closeErrorModalButton = document.querySelector(".close-error-modal");
+  $closeErrorModalButton == null ? void 0 : $closeErrorModalButton.addEventListener("click", () => {
+    errorModalContainer.remove();
+  });
 }
 const storageService = (id, rating) => {
   var _a;
@@ -267,7 +278,7 @@ const bannerButtonHandler = () => {
       MovieDetailModal(movieDetails);
     } catch (error) {
       if (error instanceof Error) {
-        ErrorPage("영화 상세 정보를 불러오는데 실패하였습니다.");
+        ErrorModal("영화 상세 정보를 불러오는데 실패하였습니다.");
       }
     }
   });
@@ -355,7 +366,7 @@ function showEmptySearchResult() {
   $movieContainer == null ? void 0 : $movieContainer.appendChild(
     toElement(`
   <div class="empty-search-result-container">
-    <img src="./images/으아아행성이.png" alt="검색 결과가 없습니다." class="empty-search-result-image"/>
+    <img src="./images/error_default_image.png" alt="검색 결과가 없습니다." class="empty-search-result-image"/>
     <p class="empty-search-result-text">검색 결과가 없습니다.</p>
   </div>
   `)
@@ -464,7 +475,7 @@ const movieDetailModalHandler = () => {
         MovieDetailModal(movieDetails);
       } catch (error) {
         if (error instanceof Error) {
-          ErrorPage("영화 상세 정보를 불러오는데 실패하였습니다.");
+          ErrorModal("영화 상세 정보를 불러오는데 실패하였습니다.");
         }
       }
     });
@@ -483,7 +494,7 @@ async function updateSearchedMovieUI($container, searchQuery) {
       movieDetailModalHandler();
     }
   } catch (error) {
-    ErrorPage("검색한 영화 리스트를 불러오는데 실패하였습니다.");
+    ErrorModal("검색한 영화 리스트를 불러오는데 실패하였습니다.");
   }
 }
 function updateHeaderTitle(searchQuery) {
@@ -560,7 +571,7 @@ const intersectionObserver = (movieList) => {
         try {
           withSkeleton(movieList, addMoreMovies(movieList));
         } catch (error) {
-          ErrorPage("영화 리스트를 불러오는데 실패하였습니다.");
+          ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
         }
       }
     });
@@ -570,7 +581,7 @@ const intersectionObserver = (movieList) => {
 async function init() {
   const $movieList = document.querySelector(".thumbnail-list");
   if (!$movieList) {
-    ErrorPage("영화 리스트를 불러오는데 실패하였습니다.");
+    ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
     return;
   }
   initUrl();
@@ -581,7 +592,7 @@ async function init() {
       addMovieCard(movies.results, $movieList);
     }
   } catch (error) {
-    ErrorPage("영화 리스트를 불러오는데 실패하였습니다.");
+    ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
   }
   const searchForm = document.querySelector(".search-form");
   searchForm == null ? void 0 : searchForm.addEventListener("submit", async (e) => {
@@ -589,7 +600,7 @@ async function init() {
     try {
       await searchFormSubmitHandler(e);
     } catch (error) {
-      ErrorPage("영화 리스트를 불러오는데 실패하였습니다.");
+      ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
     }
   });
   intersectionObserver($movieList);
