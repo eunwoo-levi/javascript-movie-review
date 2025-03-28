@@ -62,130 +62,28 @@ const getMovieList = async ({
     }
   }
 };
-const CustomButton = ({ title, className = "" }) => {
-  const customButton = document.createElement("button");
-  customButton.className = `primary detail ${className}`;
-  customButton.textContent = title;
-  return customButton;
-};
-const Header = (movie) => {
-  const $header = document.getElementById("header");
-  if (!$header) {
-    return;
-  }
-  $header.innerHTML = /*html*/
-  `
-    <div class="background-container">
-      <div class="overlay" aria-hidden="true">
-        <img src="https://media.themoviedb.org/t/p/w440_and_h660_face${movie.poster_path}" alt="MovieList" />
-      </div>
-      <div class="top-rated-container">
-        <div class="header-container">
-          <a href="./" class="logo">
-            <img src="./images/logo.png" alt="MovieList" />
-          </a>
-          <form class="search-form">
-            <input id="search-input" name="search-input" type="text" placeholder="검색어를 입력하세요" />
-            <button type="submit" class="search-button">
-              <img src="./images/search.png" alt="Search" />
-            </button>
-          </form>
-        </div>
-        <div class="top-rated-movie">
-          <div class="rate">
-            <img src="./images/star_empty.png" class="star" />
-            <span class="rate-value">${movie.vote_average}</span>
-          </div>
-          <div class="title">${movie.title}</div>
-          ${CustomButton({ title: "자세히 보기" }).outerHTML}
-        </div>
-      </div>
-    </div>
-  `;
-};
-const getUrlParams = () => {
-  return new URLSearchParams(window.location.search);
-};
-const updateUrl = (params) => {
-  const newUrl = `${window.location.pathname}?${params.toString()}`;
-  history.pushState(null, "", newUrl);
-};
-const initUrl = () => {
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "F5") {
-      history.pushState(null, "", "/");
+const getMovieDetails = async (id) => {
+  {
+    try {
+      return await apiClient("GET", `/movie/${id}`);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
     }
-  });
+  }
 };
 const toElement = (htmlString) => {
   const template = document.createElement("template");
   template.innerHTML = htmlString.trim();
   return template.content.firstChild;
 };
-function MovieCard(movieTitle, movie) {
-  const movieImgPath = movie.poster_path ? `https://media.themoviedb.org/t/p/w440_and_h660_face${movie.poster_path}` : "images/nullImage.png";
-  return toElement(`
-    <li class="item">
-      <button class="movie-card-button" id=${movie.id}>
-        <img
-          class="thumbnail"
-          src=${movieImgPath}
-          alt=${movieTitle}
-        />
-        <div class="item-desc">
-          <p class="rate">
-            <img src="./images/star_empty.png" class="star" /><span
-              >${movie.vote_average.toFixed(1)}</span
-            >
-          </p>
-          <strong class="movie-card-title">${movieTitle}</strong>
-        </div>
-      </button>
-    </li>
-  `);
-}
-function showEmptySearchResult() {
-  const $movieContainer = document.getElementById("movie-container");
-  const $emptySearchResultContainer = document.querySelector(
-    ".empty-search-result-container"
-  );
-  if ($emptySearchResultContainer) {
-    return;
-  }
-  $movieContainer == null ? void 0 : $movieContainer.appendChild(
-    toElement(`
-  <div class="empty-search-result-container">
-    <img src="./images/으아아행성이.png" alt="검색 결과가 없습니다." class="empty-search-result-image"/>
-    <p class="empty-search-result-text">검색 결과가 없습니다.</p>
-  </div>
-  `)
-  );
-}
-const createFragment = (items) => {
-  const fragment = document.createDocumentFragment();
-  fragment.append(...items);
-  return fragment;
+const CustomButton = ({ title, className = "" }) => {
+  const customButton = document.createElement("button");
+  customButton.className = `primary detail ${className}`;
+  customButton.textContent = title;
+  return customButton;
 };
-function addMovieCard(movieList, $movieListContainer) {
-  if (movieList.length === 0) {
-    showEmptySearchResult();
-    return;
-  }
-  const $emptySearchResult = document.querySelector(
-    ".empty-search-result-container"
-  );
-  if ($emptySearchResult) {
-    $emptySearchResult.remove();
-  }
-  addMoreMovies$1($movieListContainer, movieList);
-}
-function addMoreMovies$1($movieListContainer, movieList) {
-  $movieListContainer.appendChild(
-    createFragment(
-      movieList.map((movie) => MovieCard(movie.title, movie))
-    )
-  );
-}
 function ErrorPage(errorMessage) {
   const $container = document.querySelector(".container");
   const errorPageContainer = toElement(`
@@ -205,66 +103,6 @@ function ErrorPage(errorMessage) {
   });
   $container.replaceChildren(errorPageContainer);
 }
-const removeSkeletons = () => {
-  const $skeleton = document.querySelector(".skeleton");
-  $skeleton == null ? void 0 : $skeleton.remove();
-};
-const MovieSkeleton = () => {
-  return toElement(`
-      <li class="item skeleton-item">
-        <div class="thumbnail skeleton-thumbnail"></div>
-        <div class="item-desc">
-          <p class="rate skeleton-rate"></p>
-          <div class="skeleton-title"></div>
-        </div>
-      </li>
-    `);
-};
-const createSkeletons = (count = 10) => {
-  const skeleton = document.createElement("div");
-  skeleton.classList.add("skeleton");
-  skeleton.append(
-    createFragment(Array.from({ length: count }, () => MovieSkeleton()))
-  );
-  return skeleton;
-};
-function showSkeletons($container, count = 20) {
-  $container.appendChild(createSkeletons(count));
-}
-async function withSkeleton(container, asyncFunction) {
-  try {
-    showSkeletons(container);
-    const result = await asyncFunction;
-    removeSkeletons();
-    return result;
-  } catch (error) {
-    removeSkeletons();
-    throw error;
-  }
-}
-const getSearchedMovie = async (query, page) => {
-  try {
-    return await apiClient(
-      "GET",
-      `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
-    );
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-  }
-};
-const getMovieDetails = async (id) => {
-  {
-    try {
-      return await apiClient("GET", `/movie/${id}`);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-    }
-  }
-};
 const storageService = (id, rating) => {
   var _a;
   const storedRatings = JSON.parse(
@@ -400,6 +238,203 @@ function MovieDetailModal(movieDetails) {
   removeDetailModal();
   updateMovieRating();
 }
+const bannerButtonHandler = () => {
+  const $bannerButton = document.querySelector(".banner-button");
+  $bannerButton == null ? void 0 : $bannerButton.addEventListener("click", async () => {
+    const $firstMovieCardButton = document.querySelector(
+      ".movie-card-button"
+    );
+    const firstMovieCardId = $firstMovieCardButton.id;
+    try {
+      const {
+        id,
+        title,
+        poster_path,
+        release_date,
+        genres,
+        vote_average,
+        overview
+      } = await getMovieDetails(Number(firstMovieCardId));
+      const movieDetails = {
+        id,
+        title,
+        poster_path,
+        release_date,
+        genres,
+        vote_average,
+        overview
+      };
+      MovieDetailModal(movieDetails);
+    } catch (error) {
+      if (error instanceof Error) {
+        ErrorPage("영화 상세 정보를 불러오는데 실패하였습니다.");
+      }
+    }
+  });
+};
+function Header(movie) {
+  const $header = document.getElementById("header");
+  if (!$header) {
+    return;
+  }
+  $header.innerHTML = /*html*/
+  `
+    <div class="background-container">
+      <div class="overlay" aria-hidden="true">
+        <img src="https://media.themoviedb.org/t/p/w440_and_h660_face${movie.poster_path}" alt="MovieList" />
+      </div>
+      <div class="top-rated-container">
+        <div class="header-container">
+          <a href="./" class="logo">
+            <img src="./images/logo.png" alt="MovieList" />
+          </a>
+          <form class="search-form">
+            <input id="search-input" name="search-input" type="text" placeholder="검색어를 입력하세요" />
+            <button type="submit" class="search-button">
+              <img src="./images/search.png" alt="Search" />
+            </button>
+          </form>
+        </div>
+        <div class="top-rated-movie">
+          <div class="rate">
+            <img src="./images/star_empty.png" class="star" />
+            <span class="rate-value">${movie.vote_average}</span>
+          </div>
+          <div class="title">${movie.title}</div>
+          ${CustomButton({ title: "자세히 보기", className: "banner-button" }).outerHTML}
+        </div>
+      </div>
+    </div>
+  `;
+  bannerButtonHandler();
+}
+const getUrlParams = () => {
+  return new URLSearchParams(window.location.search);
+};
+const updateUrl = (params) => {
+  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  history.pushState(null, "", newUrl);
+};
+const initUrl = () => {
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F5") {
+      history.pushState(null, "", "/");
+    }
+  });
+};
+function MovieCard(movieTitle, movie) {
+  const movieImgPath = movie.poster_path ? `https://media.themoviedb.org/t/p/w440_and_h660_face${movie.poster_path}` : "images/nullImage.png";
+  return toElement(`
+    <li class="item">
+      <button class="movie-card-button" id=${movie.id}>
+        <img
+          class="thumbnail"
+          src=${movieImgPath}
+          alt=${movieTitle}
+        />
+        <div class="item-desc">
+          <p class="rate">
+            <img src="./images/star_empty.png" class="star" /><span
+              >${movie.vote_average.toFixed(1)}</span
+            >
+          </p>
+          <strong class="movie-card-title">${movieTitle}</strong>
+        </div>
+      </button>
+    </li>
+  `);
+}
+function showEmptySearchResult() {
+  const $movieContainer = document.getElementById("movie-container");
+  const $emptySearchResultContainer = document.querySelector(
+    ".empty-search-result-container"
+  );
+  if ($emptySearchResultContainer) {
+    return;
+  }
+  $movieContainer == null ? void 0 : $movieContainer.appendChild(
+    toElement(`
+  <div class="empty-search-result-container">
+    <img src="./images/으아아행성이.png" alt="검색 결과가 없습니다." class="empty-search-result-image"/>
+    <p class="empty-search-result-text">검색 결과가 없습니다.</p>
+  </div>
+  `)
+  );
+}
+const createFragment = (items) => {
+  const fragment = document.createDocumentFragment();
+  fragment.append(...items);
+  return fragment;
+};
+function addMovieCard(movieList, $movieListContainer) {
+  if (movieList.length === 0) {
+    showEmptySearchResult();
+    return;
+  }
+  const $emptySearchResult = document.querySelector(
+    ".empty-search-result-container"
+  );
+  if ($emptySearchResult) {
+    $emptySearchResult.remove();
+  }
+  addMoreMovies$1($movieListContainer, movieList);
+}
+function addMoreMovies$1($movieListContainer, movieList) {
+  $movieListContainer.appendChild(
+    createFragment(
+      movieList.map((movie) => MovieCard(movie.title, movie))
+    )
+  );
+}
+const removeSkeletons = () => {
+  const $skeleton = document.querySelector(".skeleton");
+  $skeleton == null ? void 0 : $skeleton.remove();
+};
+const MovieSkeleton = () => {
+  return toElement(`
+      <li class="item skeleton-item">
+        <div class="thumbnail skeleton-thumbnail"></div>
+        <div class="item-desc">
+          <p class="rate skeleton-rate"></p>
+          <div class="skeleton-title"></div>
+        </div>
+      </li>
+    `);
+};
+const createSkeletons = (count = 10) => {
+  const skeleton = document.createElement("div");
+  skeleton.classList.add("skeleton");
+  skeleton.append(
+    createFragment(Array.from({ length: count }, () => MovieSkeleton()))
+  );
+  return skeleton;
+};
+function showSkeletons($container, count = 20) {
+  $container.appendChild(createSkeletons(count));
+}
+async function withSkeleton(container, asyncFunction) {
+  try {
+    showSkeletons(container);
+    const result = await asyncFunction;
+    removeSkeletons();
+    return result;
+  } catch (error) {
+    removeSkeletons();
+    throw error;
+  }
+}
+const getSearchedMovie = async (query, page) => {
+  try {
+    return await apiClient(
+      "GET",
+      `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+  }
+};
 const movieDetailModalHandler = () => {
   const $movieCardButton = document.querySelectorAll(".movie-card-button");
   $movieCardButton.forEach((button) => {
