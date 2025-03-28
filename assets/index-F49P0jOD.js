@@ -36,7 +36,7 @@
   }
 })();
 const apiClient = async (method, endPoint, headers = {}) => {
-  const API_URL = `https://api.themoviedb.orgg/3${endPoint}`;
+  const API_URL = `https://api.themoviedb.org/3${endPoint}`;
   const options = {
     method,
     headers: {
