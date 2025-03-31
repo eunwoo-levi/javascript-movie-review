@@ -35,7 +35,7 @@
     fetch(link.href, fetchOpts);
   }
 })();
-const apiClient = async (method, endPoint, headers = {}) => {
+const request = async (method, endPoint, headers = {}) => {
   const API_URL = `https://api.themoviedb.org/3${endPoint}`;
   const options = {
     method,
@@ -51,26 +51,20 @@ const apiClient = async (method, endPoint, headers = {}) => {
   }
   return response.json();
 };
+const apiClient = {
+  get: (url, options) => request("GET", url, options),
+  post: (url, options) => request("POST", url, options),
+  put: (url, options) => request("PUT", url, options),
+  delete: (url, options) => request("DELETE", url, options)
+};
 const getMovieList = async ({
   page
 }) => {
-  try {
-    return await apiClient("GET", `/movie/popular?page=${page}`);
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-  }
+  return await apiClient.get(`/movie/popular?page=${page}`);
 };
 const getMovieDetails = async (id) => {
   {
-    try {
-      return await apiClient("GET", `/movie/${id}`);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      }
-    }
+    return await apiClient.get(`/movie/${id}`);
   }
 };
 const toElement = (htmlString) => {
@@ -114,20 +108,23 @@ function closeErrorModal(errorModalContainer) {
     errorModalContainer.remove();
   });
 }
-const storageService = (id, rating) => {
+const movieRatingStorage = (id, rating) => {
   var _a;
+  console.log("alkfjslf", id, rating);
   const storedRatings = JSON.parse(
     localStorage.getItem("my-movie-rating") || "[]"
   );
   if (typeof rating === "undefined") {
     return ((_a = storedRatings.find((item) => item.id === id)) == null ? void 0 : _a.rating) || 0;
   }
+  console.log("???");
   const index = storedRatings.findIndex((item) => item.id === id);
   if (index !== -1) {
     storedRatings[index].rating = rating;
   } else {
     storedRatings.push({ id, rating });
   }
+  console.log("으음", storedRatings);
   localStorage.setItem("my-movie-rating", JSON.stringify(storedRatings));
 };
 const removeDetailModal = () => {
@@ -190,7 +187,7 @@ const updateMovieRating = () => {
     const rating = Number(starRatingButton.dataset.key);
     const $modal = target.closest(".modal");
     const movieId = $modal.dataset.id;
-    storageService(Number(movieId), rating);
+    movieRatingStorage(Number(movieId), rating);
     const $myRatingContainer = document.querySelector(
       ".my-rating-container"
     );
@@ -202,7 +199,7 @@ const updateMovieRating = () => {
 };
 function MovieDetailModal(movieDetails) {
   const $container = document.getElementById("wrap");
-  const rating = storageService(movieDetails.id);
+  const rating = movieRatingStorage(movieDetails.id);
   const movieDetailModal = toElement(`
     <div class="modal-background active" id="modalBackground">
       <div class="modal" data-id=${movieDetails.id}>
@@ -233,7 +230,7 @@ function MovieDetailModal(movieDetails) {
             <hr class="bar"/>
             <div class="my-rating-container">
               <h2>내 별점</h2>
-                ${MyRatingInDetailModal(rating)}
+                ${MyRatingInDetailModal(rating * 2)}
             </div>
             <hr class="bar"/>
             <div class="detail">
@@ -257,25 +254,7 @@ const bannerButtonHandler = () => {
     );
     const firstMovieCardId = $firstMovieCardButton.id;
     try {
-      const {
-        id,
-        title,
-        poster_path,
-        release_date,
-        genres,
-        vote_average,
-        overview
-      } = await getMovieDetails(Number(firstMovieCardId));
-      const movieDetails = {
-        id,
-        title,
-        poster_path,
-        release_date,
-        genres,
-        vote_average,
-        overview
-      };
-      MovieDetailModal(movieDetails);
+      MovieDetailModal(await getMovieDetails(Number(firstMovieCardId)));
     } catch (error) {
       if (error instanceof Error) {
         ErrorModal("영화 상세 정보를 불러오는데 실패하였습니다.");
@@ -319,6 +298,20 @@ function Header(movie) {
   `;
   bannerButtonHandler();
 }
+Header.updateMovieContainerTitle = (searchQuery) => {
+  const $movieListTitle = document.querySelector(".movie-list-title");
+  if ($movieListTitle) {
+    $movieListTitle.textContent = `"${searchQuery}" 검색 결과`;
+  }
+};
+Header.addClassToElements = (targets) => {
+  targets.forEach((target) => {
+    const $el = document.querySelector(target.selector);
+    if ($el) {
+      $el.classList.add(target.className);
+    }
+  });
+};
 const getUrlParams = () => {
   return new URLSearchParams(window.location.search);
 };
@@ -333,7 +326,7 @@ const initUrl = () => {
     }
   });
 };
-function MovieCard(movieTitle, movie) {
+function MovieCard(movie) {
   const movieImgPath = movie.poster_path ? `https://media.themoviedb.org/t/p/w440_and_h660_face${movie.poster_path}` : "images/nullImage.png";
   return toElement(`
     <li class="item">
@@ -341,7 +334,7 @@ function MovieCard(movieTitle, movie) {
         <img
           class="thumbnail"
           src=${movieImgPath}
-          alt=${movieTitle}
+          alt=${movie.title}
         />
         <div class="item-desc">
           <p class="rate">
@@ -349,7 +342,7 @@ function MovieCard(movieTitle, movie) {
               >${movie.vote_average.toFixed(1)}</span
             >
           </p>
-          <strong class="movie-card-title">${movieTitle}</strong>
+          <strong class="movie-card-title">${movie.title}</strong>
         </div>
       </button>
     </li>
@@ -392,9 +385,7 @@ function addMovieCard(movieList, $movieListContainer) {
 }
 function addMoreMovies$1($movieListContainer, movieList) {
   $movieListContainer.appendChild(
-    createFragment(
-      movieList.map((movie) => MovieCard(movie.title, movie))
-    )
+    createFragment(movieList.map((movie) => MovieCard(movie)))
   );
 }
 const removeSkeletons = () => {
@@ -435,16 +426,9 @@ async function withSkeleton(container, asyncFunction) {
   }
 }
 const getSearchedMovie = async (query, page) => {
-  try {
-    return await apiClient(
-      "GET",
-      `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
-    );
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-  }
+  return await apiClient.get(
+    `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
+  );
 };
 const movieDetailModalHandler = () => {
   const $movieCardButton = document.querySelectorAll(".movie-card-button");
@@ -453,6 +437,10 @@ const movieDetailModalHandler = () => {
       var _a;
       const target = e.target;
       const movieId = (_a = target.closest(".movie-card-button")) == null ? void 0 : _a.id;
+      const $modal = document.querySelector(".modal");
+      if ($modal) {
+        return;
+      }
       try {
         const {
           id,
@@ -483,33 +471,26 @@ const movieDetailModalHandler = () => {
 };
 async function updateSearchedMovieUI($container, searchQuery) {
   try {
-    disableElements();
-    updateHeaderTitle(searchQuery);
+    Header.addClassToElements([
+      { selector: ".overlay", className: "disabled" },
+      { selector: ".top-rated-movie", className: "disabled" },
+      {
+        selector: ".background-container",
+        className: "background-container-disabled"
+      }
+    ]);
+    Header.updateMovieContainerTitle(searchQuery);
     const searchedMovies = await withSkeleton(
       $container,
       getSearchedMovie(String(searchQuery), 1)
     );
-    if (searchedMovies) {
+    if (searchedMovies && searchedMovies.results.length > 0) {
       addMovieCard(searchedMovies.results, $container);
       movieDetailModalHandler();
     }
   } catch (error) {
     ErrorModal("검색한 영화 리스트를 불러오는데 실패하였습니다.");
   }
-}
-function updateHeaderTitle(searchQuery) {
-  const $movieListTitle = document.querySelector(".movie-list-title");
-  if ($movieListTitle) {
-    $movieListTitle.textContent = `"${searchQuery}" 검색 결과`;
-  }
-}
-function disableElements() {
-  const $overlay = document.querySelector(".overlay");
-  $overlay == null ? void 0 : $overlay.classList.add("disabled");
-  const $topRatedMovie = document.querySelector(".top-rated-movie");
-  $topRatedMovie == null ? void 0 : $topRatedMovie.classList.add("disabled");
-  const $backgroundContainer = document.querySelector(".background-container");
-  $backgroundContainer == null ? void 0 : $backgroundContainer.classList.add("background-container-disabled");
 }
 const searchFormSubmitHandler = async (e) => {
   const $thumbnailList = document.querySelector(
@@ -522,7 +503,7 @@ const searchFormSubmitHandler = async (e) => {
   const searchQuery = formData.get("search-input");
   const params = getUrlParams();
   updateUrlParams(params, String(searchQuery));
-  updateSearchedMovieUI($thumbnailList, String(searchQuery));
+  await updateSearchedMovieUI($thumbnailList, String(searchQuery));
   updateUrl(params);
 };
 function updateUrlParams(params, searchQuery) {
@@ -535,6 +516,25 @@ function updateUrlParams(params, searchQuery) {
     params.set("query", searchQuery);
   }
 }
+const intersectionObserver = (handler) => {
+  const target = document.getElementById("target");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const handleFetch = async () => {
+          try {
+            await handler();
+          } catch (error) {
+            ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
+            observer.disconnect();
+          }
+        };
+        handleFetch();
+      }
+    });
+  });
+  observer.observe(target);
+};
 async function addMoreMovies($movieList) {
   const params = getUrlParams();
   const page = params.get("page");
@@ -563,25 +563,6 @@ async function addMoreMovies($movieList) {
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   history.pushState(null, "", newUrl);
 }
-const intersectionObserver = (movieList) => {
-  const target = document.getElementById("target");
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        const handleFetch = async () => {
-          try {
-            await withSkeleton(movieList, addMoreMovies(movieList));
-          } catch (error) {
-            ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
-            observer.disconnect();
-          }
-        };
-        handleFetch();
-      }
-    });
-  });
-  observer.observe(target);
-};
 async function init() {
   const $movieList = document.querySelector(".thumbnail-list");
   if (!$movieList) {
@@ -590,10 +571,22 @@ async function init() {
   }
   initUrl();
   try {
-    const movies = await withSkeleton($movieList, getMovieList({ page: 1 }));
-    if (movies) {
-      Header(movies.results[0]);
-      addMovieCard(movies.results, $movieList);
+    const movieLists = await withSkeleton(
+      $movieList,
+      getMovieList({ page: 1 })
+    );
+    if (movieLists) {
+      const movies = movieLists.results.map((movieList) => {
+        const { id, title, poster_path, vote_average } = movieList;
+        return {
+          id,
+          title,
+          poster_path,
+          vote_average
+        };
+      });
+      Header(movies[0]);
+      addMovieCard(movies, $movieList);
     }
   } catch (error) {
     ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
@@ -607,7 +600,9 @@ async function init() {
       ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
     }
   });
-  intersectionObserver($movieList);
+  intersectionObserver(
+    () => withSkeleton($movieList, addMoreMovies($movieList))
+  );
   movieDetailModalHandler();
 }
 if (document.readyState === "loading") {
