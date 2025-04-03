@@ -73,10 +73,11 @@ const toElement = (htmlString) => {
   return template.content.firstChild;
 };
 const CustomButton = ({ title, className = "" }) => {
-  const customButton = document.createElement("button");
-  customButton.className = `primary detail ${className}`;
-  customButton.textContent = title;
-  return customButton;
+  return `
+    <button class="primary detail ${className}">
+      ${title}
+    </button>
+  `;
 };
 function ErrorModal(errorMessage) {
   const $container = document.getElementById("wrap");
@@ -90,7 +91,7 @@ function ErrorModal(errorMessage) {
       ${CustomButton({
     title: "홈으로 돌아가기",
     className: "error-modal-button"
-  }).outerHTML}
+  })}
     </div>
   `);
   const errorModalButton = errorModalContainer.querySelector(
@@ -110,21 +111,18 @@ function closeErrorModal(errorModalContainer) {
 }
 const movieRatingStorage = (id, rating) => {
   var _a;
-  console.log("alkfjslf", id, rating);
   const storedRatings = JSON.parse(
     localStorage.getItem("my-movie-rating") || "[]"
   );
   if (typeof rating === "undefined") {
     return ((_a = storedRatings.find((item) => item.id === id)) == null ? void 0 : _a.rating) || 0;
   }
-  console.log("???");
   const index = storedRatings.findIndex((item) => item.id === id);
   if (index !== -1) {
     storedRatings[index].rating = rating;
   } else {
     storedRatings.push({ id, rating });
   }
-  console.log("으음", storedRatings);
   localStorage.setItem("my-movie-rating", JSON.stringify(storedRatings));
 };
 const removeDetailModal = () => {
@@ -291,7 +289,7 @@ function Header(movie) {
             <span class="rate-value">${movie.vote_average}</span>
           </div>
           <div class="title">${movie.title}</div>
-          ${CustomButton({ title: "자세히 보기", className: "banner-button" }).outerHTML}
+          ${CustomButton({ title: "자세히 보기", className: "banner-button" })}
         </div>
       </div>
     </div>
@@ -370,23 +368,57 @@ const createFragment = (items) => {
   fragment.append(...items);
   return fragment;
 };
-function addMovieCard(movieList, $movieListContainer) {
-  if (movieList.length === 0) {
-    showEmptySearchResult();
-    return;
-  }
-  const $emptySearchResult = document.querySelector(
-    ".empty-search-result-container"
+const intersectionObserver = (handler) => {
+  const target = document.getElementById("target");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const handleFetch = async () => {
+          try {
+            await handler();
+          } catch (error) {
+            ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
+            observer.disconnect();
+          }
+        };
+        handleFetch();
+      }
+    });
+  });
+  observer.observe(target);
+};
+const getSearchedMovie = async (query, page) => {
+  return await apiClient.get(
+    `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
   );
-  if ($emptySearchResult) {
-    $emptySearchResult.remove();
+};
+async function addMoreMovies($movieList) {
+  const params = getUrlParams();
+  const page = params.get("page");
+  const query = params.get("query");
+  if (!page) {
+    params.append("page", "2");
+  } else {
+    params.set("page", (parseInt(page) + 1).toString());
   }
-  addMoreMovies$1($movieListContainer, movieList);
-}
-function addMoreMovies$1($movieListContainer, movieList) {
-  $movieListContainer.appendChild(
-    createFragment(movieList.map((movie) => MovieCard(movie)))
-  );
+  if (query) {
+    const searchedMovies = await getSearchedMovie(
+      query,
+      parseInt(params.get("page"))
+    );
+    if (!searchedMovies) {
+      return;
+    }
+    addMovieCard(searchedMovies.results, $movieList);
+  } else {
+    const movies = await getMovieList({ page: parseInt(params.get("page")) });
+    if (!movies) {
+      return;
+    }
+    addMovieCard(movies.results, $movieList);
+  }
+  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  history.pushState(null, "", newUrl);
 }
 const removeSkeletons = () => {
   const $skeleton = document.querySelector(".skeleton");
@@ -425,11 +457,37 @@ async function withSkeleton(container, asyncFunction) {
     throw error;
   }
 }
-const getSearchedMovie = async (query, page) => {
-  return await apiClient.get(
-    `/search/movie?query=${query}&include_adult=true&language=ko-KR&page=${page}`
+function addMovieCard(movieList, $movieListContainer) {
+  if (movieList.length === 0) {
+    const $targetDiv = document.getElementById("target");
+    $targetDiv.remove();
+    if (!document.querySelector(".item")) {
+      showEmptySearchResult();
+    }
+    return;
+  }
+  if (!document.getElementById("target")) {
+    const newTargetDiv = document.createElement("div");
+    newTargetDiv.id = "target";
+    const $wrapDiv = document.getElementById("wrap");
+    $wrapDiv.appendChild(newTargetDiv);
+    intersectionObserver(
+      () => withSkeleton($movieListContainer, addMoreMovies($movieListContainer))
+    );
+  }
+  const $emptySearchResult = document.querySelector(
+    ".empty-search-result-container"
   );
-};
+  if ($emptySearchResult) {
+    $emptySearchResult.remove();
+  }
+  addMoreMovieCards($movieListContainer, movieList);
+}
+function addMoreMovieCards($movieListContainer, movieList) {
+  $movieListContainer.appendChild(
+    createFragment(movieList.map((movie) => MovieCard(movie)))
+  );
+}
 const movieDetailModalHandler = () => {
   const $movieCardButton = document.querySelectorAll(".movie-card-button");
   $movieCardButton.forEach((button) => {
@@ -484,7 +542,7 @@ async function updateSearchedMovieUI($container, searchQuery) {
       $container,
       getSearchedMovie(String(searchQuery), 1)
     );
-    if (searchedMovies && searchedMovies.results.length > 0) {
+    if (searchedMovies) {
       addMovieCard(searchedMovies.results, $container);
       movieDetailModalHandler();
     }
@@ -515,53 +573,6 @@ function updateUrlParams(params, searchQuery) {
     params.set("page", "1");
     params.set("query", searchQuery);
   }
-}
-const intersectionObserver = (handler) => {
-  const target = document.getElementById("target");
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        const handleFetch = async () => {
-          try {
-            await handler();
-          } catch (error) {
-            ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
-            observer.disconnect();
-          }
-        };
-        handleFetch();
-      }
-    });
-  });
-  observer.observe(target);
-};
-async function addMoreMovies($movieList) {
-  const params = getUrlParams();
-  const page = params.get("page");
-  const query = params.get("query");
-  if (!page) {
-    params.append("page", "2");
-  } else {
-    params.set("page", (parseInt(page) + 1).toString());
-  }
-  if (query) {
-    const searchedMovies = await getSearchedMovie(
-      query,
-      parseInt(params.get("page"))
-    );
-    if (!searchedMovies) {
-      return;
-    }
-    addMovieCard(searchedMovies.results, $movieList);
-  } else {
-    const movies = await getMovieList({ page: parseInt(params.get("page")) });
-    if (!movies) {
-      return;
-    }
-    addMovieCard(movies.results, $movieList);
-  }
-  const newUrl = `${window.location.pathname}?${params.toString()}`;
-  history.pushState(null, "", newUrl);
 }
 async function init() {
   const $movieList = document.querySelector(".thumbnail-list");
@@ -600,9 +611,12 @@ async function init() {
       ErrorModal("영화 리스트를 불러오는데 실패하였습니다.");
     }
   });
-  intersectionObserver(
-    () => withSkeleton($movieList, addMoreMovies($movieList))
-  );
+  const query = getUrlParams().get("query");
+  if (!query) {
+    intersectionObserver(
+      () => withSkeleton($movieList, addMoreMovies($movieList))
+    );
+  }
   movieDetailModalHandler();
 }
 if (document.readyState === "loading") {
